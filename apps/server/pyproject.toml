@@ -1,73 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "talkmateai-server"
 version = "0.1.0"
 description = "TalkMateAI server application"
 readme = "README.md"
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.10"
+
 dependencies = [
-    # PyTorch with CUDA support - specific versions
-    "torch==2.9.0",
-    "torchvision",
-    # Flash attention - Windows specific wheel
-    #"flash-attn",
-    # From requirements.txt
-    "soundfile==0.13.1",
-    "pillow==11.0.0",
-    "scipy==1.15.2",
-    "backoff==2.2.1",
-    "peft==0.13.2",
-    "wheel",
-    "packaging",
-    "kokoro",
-    "requests",
-    "websockets",
-    "transformers==4.57.1",
-    #"transformers @ git+https://github.com/huggingface/transformers@v4.49.0-SmolVLM-2",
-    "accelerate>=1.7.0",
-    "bitsandbytes>=0.46.0",
-    #"triton-windows==3.2.0.post17",
-    "pip>=25.1.1",
-    "fastapi[standard]>=0.115.6",
-    "uvicorn>=0.34.3",
-    "whisper>=1.1.10",
-    "black>=25.1.0",
+  "fastapi>=0.104.0",
+  "uvicorn[standard]>=0.24.0",
+  "openai==2.7.1",
+  "httpx>=0.25.0",
+  "python-multipart>=0.0.6",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=24.10.0",
-    "pre-commit>=4.0.1",
-]
-
-# [tool.uv]
-# PyTorch CUDA index for GPU support
-#extra-index-url = [
-#    "https://download.pytorch.org/whl/cu124
-#]
-#index-strategy = "unsafe-best-match"
-
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cpu" },
-]
-torchvision = [
-    { index = "pytorch-cpu" },
-]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-include = [
-    "*.py",
-    "README.md",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["hf*", "received_images*"]
