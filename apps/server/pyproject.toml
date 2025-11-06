@@ -6,10 +6,10 @@ readme = "README.md"
 requires-python = ">=3.10,<3.11"
 dependencies = [
     # PyTorch with CUDA support - specific versions
-    "torch==2.6.0+cu124",
-    "torchvision==0.21.0+cu124",
+    "torch==2.9.0",
+    "torchvision",
     # Flash attention - Windows specific wheel
-    "flash-attn @ https://github.com/kingbri1/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu124torch2.6.0cxx11abiFALSE-cp310-cp310-win_amd64.whl ; sys_platform == 'win32'",
+    #"flash-attn",
     # From requirements.txt
     "soundfile==0.13.1",
     "pillow==11.0.0",
@@ -21,15 +21,16 @@ dependencies = [
     "kokoro",
     "requests",
     "websockets",
-    # "transformers==4.48.2",
-    "transformers @ git+https://github.com/huggingface/transformers@v4.49.0-SmolVLM-2",
+    "transformers==4.57.1",
+    #"transformers @ git+https://github.com/huggingface/transformers@v4.49.0-SmolVLM-2",
     "accelerate>=1.7.0",
     "bitsandbytes>=0.46.0",
-    "triton-windows==3.2.0.post17",
+    #"triton-windows==3.2.0.post17",
     "pip>=25.1.1",
     "fastapi[standard]>=0.115.6",
     "uvicorn>=0.34.3",
     "whisper>=1.1.10",
+    "black>=25.1.0",
 ]
 
 [project.optional-dependencies]
@@ -38,12 +39,25 @@ dev = [
     "pre-commit>=4.0.1",
 ]
 
-[tool.uv]
+# [tool.uv]
 # PyTorch CUDA index for GPU support
-extra-index-url = [
-    "https://download.pytorch.org/whl/cu124"
+#extra-index-url = [
+#    "https://download.pytorch.org/whl/cu124
+#]
+#index-strategy = "unsafe-best-match"
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
 ]
-index-strategy = "unsafe-best-match"
+torchvision = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
