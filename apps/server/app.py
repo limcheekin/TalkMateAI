@@ -292,7 +292,7 @@ class OpenAIProcessor:
                 model=settings.STT_MODEL,
                 file=self.raw_pcm16_to_wav_file(audio_bytes),
                 response_format=settings.STT_RESPONSE_FORMAT,
-                language=settings.STT_LANGUAGE,
+                language=settings.LANGUAGE,
             )
 
             transcribed_text = (
