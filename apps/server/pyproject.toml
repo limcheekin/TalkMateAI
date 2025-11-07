@@ -16,6 +16,7 @@ dependencies = [
   "httpx>=0.25.0",
   "python-multipart>=0.0.6",
   "black>=25.9.0",
+  "pydantic-settings>=2.11.0",
 ]
 
 [tool.setuptools.packages.find]

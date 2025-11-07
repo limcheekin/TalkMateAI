@@ -19,6 +19,8 @@ from openai import AsyncOpenAI
 import httpx
 import io
 import wave
+from settings import get_settings
+
 
 # Configure logging
 logging.basicConfig(
@@ -28,13 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration
-API_BASE_URL = "http://192.168.1.111:8880/v1"
-TTS_BASE_URL = "http://192.168.1.111:8884/dev"
-VLM_MODEL = "smolvlm2-500m-video-instruct"
-WHISPER_MODEL = "whisper-1"
-TTS_MODEL = "kokoro"
-TTS_VOICE = "af_heart"
+settings = get_settings()
 
 
 class WordTimingEstimator:
@@ -149,11 +145,11 @@ class ImageManager:
 class OpenAIProcessor:
     """Unified processor using OpenAI-compatible APIs"""
 
-    def __init__(self, base_url: str, dev_base_url: str):
+    def __init__(self, llm_base_url: str, tts_base_url: str):
         # ⚡ OPTIMIZATION: Connection pooling and keepalive for better performance
-        self.client = AsyncOpenAI(
-            base_url=base_url,
-            api_key="dummy-key",
+        self.llm_client = AsyncOpenAI(
+            base_url=llm_base_url,
+            api_key=settings.LLM_API_KEY.get_secret_value(),
             timeout=httpx.Timeout(30.0, connect=5.0),  # ⚡ Reduced timeout
             http_client=httpx.AsyncClient(
                 limits=httpx.Limits(
@@ -163,7 +159,34 @@ class OpenAIProcessor:
                 )
             ),
         )
-        self.dev_base_url = dev_base_url
+
+        self.stt_client = AsyncOpenAI(
+            base_url=settings.STT_BASE_URL,
+            api_key=settings.STT_API_KEY.get_secret_value(),
+            timeout=httpx.Timeout(30.0, connect=5.0),  # ⚡ Reduced timeout
+            http_client=httpx.AsyncClient(
+                limits=httpx.Limits(
+                    max_connections=20,  # ⚡ Increased connection pool
+                    max_keepalive_connections=10,
+                    keepalive_expiry=30.0,
+                )
+            ),
+        )
+
+        self.tts_client = AsyncOpenAI(
+            base_url=tts_base_url,
+            api_key=settings.TTS_API_KEY.get_secret_value(),
+            timeout=httpx.Timeout(30.0, connect=5.0),  # ⚡ Reduced timeout
+            http_client=httpx.AsyncClient(
+                limits=httpx.Limits(
+                    max_connections=20,  # ⚡ Increased connection pool
+                    max_keepalive_connections=10,
+                    keepalive_expiry=30.0,
+                )
+            ),
+        )
+
+        self.tts_base_url = tts_base_url
         self.message_history: list = []
         self.max_history_messages = 8
         self.current_image_b64: Optional[str] = None
@@ -265,10 +288,11 @@ class OpenAIProcessor:
     async def transcribe_audio(self, audio_bytes: bytes) -> Optional[str]:
         """Transcribe audio using Whisper API"""
         try:
-            response = await self.client.audio.transcriptions.create(
-                model=WHISPER_MODEL,
+            response = await self.stt_client.audio.transcriptions.create(
+                model=settings.STT_MODEL,
                 file=self.raw_pcm16_to_wav_file(audio_bytes),
-                response_format="verbose_json",
+                response_format=settings.STT_RESPONSE_FORMAT,
+                language=settings.STT_LANGUAGE,
             )
 
             transcribed_text = (
@@ -332,12 +356,11 @@ class OpenAIProcessor:
                 else:
                     messages.append({"role": "user", "content": user_text})
 
-                stream = await self.client.chat.completions.create(
-                    model=VLM_MODEL,
+                stream = await self.llm_client.chat.completions.create(
+                    model=settings.LLM_MODEL,
                     messages=messages,
-                    max_tokens=1200,
+                    max_tokens=512,
                     stream=True,
-                    temperature=0.7,
                 )
 
                 self.generation_count += 1
@@ -392,13 +415,13 @@ class OpenAIProcessor:
                         ),
                     ) as client:
                         response = await client.post(
-                            f"{self.dev_base_url}/captioned_speech",
+                            f"{self.tts_base_url}/captioned_speech",
                             json={
-                                "model": TTS_MODEL,
+                                "model": settings.TTS_MODEL,
                                 "input": text,
-                                "voice": TTS_VOICE,
+                                "voice": settings.TTS_VOICE,
                                 "speed": 1.0,
-                                "response_format": "pcm",
+                                "response_format": settings.TTS_AUDIO_FORMAT,
                                 "stream": True,
                             },
                         )
@@ -493,11 +516,11 @@ class OpenAIProcessor:
 
             # Fallback to standard endpoint with estimated timing
             if not use_native_timing:
-                response = await self.client.audio.speech.create(
-                    model=TTS_MODEL,
-                    voice=TTS_VOICE,
+                response = await self.tts_client.audio.speech.create(
+                    model=settings.TTS_MODEL,
+                    voice=settings.TTS_VOICE,
                     input=text,
-                    response_format="pcm",
+                    response_format=settings.TTS_AUDIO_FORMAT,
                     speed=1.0,
                 )
 
@@ -609,7 +632,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Initializing OpenAI processor...")
     try:
-        processor = OpenAIProcessor(API_BASE_URL, TTS_BASE_URL)
+        processor = OpenAIProcessor(settings.LLM_BASE_URL, settings.TTS_BASE_URL)
         logger.info("OpenAI processor initialized successfully")
     except Exception as e:
         logger.error(f"Error initializing processor: {e}")
