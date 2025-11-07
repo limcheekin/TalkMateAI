@@ -70,7 +70,7 @@ interface WebSocketProviderProps {
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   children,
-  serverUrl = 'ws://localhost:8000/ws/test-client'
+  serverUrl = 'ws://192.168.1.111:18000/ws/test-client'
 }) => {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
